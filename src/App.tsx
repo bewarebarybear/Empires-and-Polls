@@ -12,9 +12,10 @@ interface Poll {
 }
 
 interface SummonResult {
-  rarity: 'Legendary' | 'Epic' | 'Rare';
+  rarity: '5*' | '4*' | '3*';
   color: string;
   name: string;
+  isHotM?: boolean;
 }
 
 const initialPolls: Poll[] = [
@@ -157,25 +158,35 @@ export default function App() {
 }
 
 function SummonSimulator() {
-  const [selectedPortal, setSelectedPortal] = useState<'solstice' | 'blackfriday' | 'covenant' | 'seasonal' | 'standard'>('solstice');
+  const [selectedPortal, setSelectedPortal] = useState<string>('lego');
   const [pullType, setPullType] = useState<1 | 10 | 30>(1);
   const [results, setResults] = useState<SummonResult[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const portalConfigs = {
-    solstice: { name: 'Solstice Portal', leg: 10.0, epic: 40.0, rare: 50.0 },
-    blackfriday: { name: 'Black Friday Portal', leg: 8.5, epic: 41.5, rare: 50.0 },
-    covenant: { name: 'Covenant Portal', leg: 5.0, epic: 35.0, rare: 60.0 },
-    seasonal: { name: 'Season of Love Portal', leg: 3.5, epic: 26.5, rare: 70.0 },
-    standard: { name: 'Standard Epic Portal', leg: 1.5, epic: 18.5, rare: 80.0 },
+  // Exact portal configurations matching user specs
+  const portalConfigs: Record<string, { name: string; legFeat: number; legNonFeat: number; epic: number; rare: number }> = {
+    lego: { name: 'Lego Troop', legFeat: 3.0, legNonFeat: 0.2, epic: 14.0, rare: 83.0 },
+    costume: { name: 'Costume Chamber', legFeat: 1.3, legNonFeat: 1.2, epic: 26.5, rare: 71.0 },
+    seasonal: { name: 'Seasonal Portal', legFeat: 1.3, legNonFeat: 0.3, epic: 26.5, rare: 71.0 },
+    covenant: { name: 'Covenant', legFeat: 1.6, legNonFeat: 0.9, epic: 26.5, rare: 71.0 },
+    superElemental: { name: 'Super Elemental', legFeat: 0.5, legNonFeat: 1.9, epic: 26.5, rare: 71.0 },
+    challenge: { name: 'Challenge Event', legFeat: 1.0, legNonFeat: 1.5, epic: 26.5, rare: 71.0 },
+    tower: { name: 'Tower Portal', legFeat: 1.0, legNonFeat: 0.4, epic: 26.5, rare: 71.0 },
+    w3k: { name: 'W3K', legFeat: 1.0, legNonFeat: 1.5, epic: 26.5, rare: 71.0 },
+    untoldTales: { name: 'Untold Tales', legFeat: 1.0, legNonFeat: 0.4, epic: 26.5, rare: 71.0 },
+    bazaar: { name: 'Bazaar Portal', legFeat: 1.5, legNonFeat: 1.0, epic: 26.5, rare: 71.0 },
+    heroLeague: { name: 'Hero League', legFeat: 1.0, legNonFeat: 1.0, epic: 26.5, rare: 71.0 },
   };
 
-  const categoryPools = {
-    Legendary: ['5* Featured', '5* Classic', '5* S3', '5* S4', '5* S5', '5* Untold Tales', '5* Goblin', '5* Astral'],
-    Epic: ['Epic Featured', '4* Classic', '4* S3', '4* S4', '4* S5', '4* UT1', '4* UT2', '4* Tavern'],
-    Rare: ['3* Classic', '3* S3', '3* S4', '3* S5', '3* UT1', '3* UT2', '3* Season Realm'],
-  };
+  // Element-based random colors (Yellow, Purple, Blue, Green, Red)
+  const elementColors = [
+    'bg-amber-500/20 text-amber-300 border-amber-500/40', // Yellow
+    'bg-purple-600/20 text-purple-300 border-purple-500/40', // Purple
+    'bg-blue-600/20 text-blue-300 border-blue-500/40', // Blue
+    'bg-emerald-600/20 text-emerald-300 border-emerald-500/40', // Green
+    'bg-rose-600/20 text-rose-300 border-rose-500/40', // Red
+  ];
 
   const handleSummon = () => {
     if (isSpinning) return;
@@ -186,27 +197,55 @@ function SummonSimulator() {
     const config = portalConfigs[selectedPortal];
     const generatedPulls: SummonResult[] = [];
 
+    const pLegFeat = config.legFeat;
+    const pLegNonFeat = config.legNonFeat;
+    const pEpic = config.epic;
+
     for (let i = 0; i < pullType; i++) {
       const roll = Math.random() * 100;
-      let rarity: 'Legendary' | 'Epic' | 'Rare' = 'Rare';
-      let color = 'bg-blue-600/20 text-blue-400 border-blue-500/30';
+      let rarity: '5*' | '4*' | '3*' = '3*';
+      let category = '';
 
-      if (roll < config.leg) {
-        rarity = 'Legendary';
-        color = 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-amber-500/10 shadow-lg';
-      } else if (roll < config.leg + config.epic) {
-        rarity = 'Epic';
-        color = 'bg-purple-600/20 text-purple-400 border-purple-500/30';
+      if (roll < pLegFeat) {
+        rarity = '5*';
+        category = 'Featured';
+      } else if (roll < pLegFeat + pLegNonFeat) {
+        rarity = '5*';
+        const pools5NonFeat = ['Classic', 'S2', 'S3', 'S4', 'S5', 'UT1', 'UT2'];
+        category = pools5NonFeat[Math.floor(Math.random() * pools5NonFeat.length)];
+      } else if (roll < pLegFeat + pLegNonFeat + pEpic) {
+        rarity = '4*';
+        const pools4 = ['Classic', 'S2', 'S3', 'S4', 'S5', 'UT1', 'UT2'];
+        category = pools4[Math.floor(Math.random() * pools4.length)];
+      } else {
+        rarity = '3*';
+        const pools3 = ['Classic', 'S2', 'S3', 'S4', 'S5', 'UT1', 'UT2'];
+        category = pools3[Math.floor(Math.random() * pools3.length)];
       }
 
-      const pool = categoryPools[rarity];
-      const randomCategory = pool[Math.floor(Math.random() * pool.length)];
+      const randomColor = elementColors[Math.floor(Math.random() * elementColors.length)];
       
       generatedPulls.push({ 
         rarity, 
-        color, 
-        name: randomCategory 
+        color: randomColor, 
+        name: `${rarity} ${category}` 
       });
+    }
+
+    // HotM Bonus Pull (1.3% chance per pull, applied to all portals except Lego Troop)
+    if (selectedPortal !== 'lego') {
+      for (let i = 0; i < pullType; i++) {
+        const hotmRoll = Math.random() * 100;
+        if (hotmRoll < 1.3) {
+          const hotmColor = elementColors[Math.floor(Math.random() * elementColors.length)];
+          generatedPulls.push({
+            rarity: '5*',
+            color: hotmColor,
+            name: '5* HotM',
+            isHotM: true
+          });
+        }
+      }
     }
 
     setResults(generatedPulls);
@@ -245,14 +284,12 @@ function SummonSimulator() {
           </label>
           <select
             value={selectedPortal}
-            onChange={(e) => setSelectedPortal(e.target.value as any)}
+            onChange={(e) => setSelectedPortal(e.target.value)}
             className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:border-amber-500 cursor-pointer"
           >
-            <option value="solstice">Solstice Portal (High Leg Odds)</option>
-            <option value="blackfriday">Black Friday Portal</option>
-            <option value="covenant">Covenant Portal</option>
-            <option value="seasonal">Season of Love Portal</option>
-            <option value="standard">Standard Epic Portal (Brutal Odds)</option>
+            {Object.entries(portalConfigs).map(([key, cfg]) => (
+              <option key={key} value={key}>{cfg.name}</option>
+            ))}
           </select>
         </div>
 
@@ -301,8 +338,13 @@ function SummonSimulator() {
             {results.slice(0, pullType === 1 ? 1 : currentIndex).map((res, idx) => (
               <div
                 key={idx}
-                className={`p-2.5 rounded-xl border text-center font-bold text-xs ${res.color} flex items-center justify-center animate-fade-in`}
+                className={`p-2.5 rounded-xl border text-center font-bold text-xs ${res.color} flex items-center justify-center animate-fade-in relative`}
               >
+                {res.isHotM && (
+                  <span className="absolute -top-2 -right-2 bg-rose-500 text-zinc-950 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">
+                    BONUS!
+                  </span>
+                )}
                 {res.name}
               </div>
             ))}
